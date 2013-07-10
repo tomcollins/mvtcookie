@@ -1,0 +1,17 @@
+{
+  "cookieTTL": 60000,
+  "projects": [
+    {
+      "id": "homepage",
+      "routes": [
+        "^\/$"
+      ]
+    },
+    {
+      "id": "news",
+      "routes": [
+        "\/news\/"
+      ]
+    }
+  ]
+}
