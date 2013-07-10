@@ -27,8 +27,7 @@ function loadProjectConfigs() {
   appConfig.projects.forEach(function(project){
     (function () {
       var id = project.id
-        , apiId = project._id
-        , options = utils.getHttpOptions(apiBase +'/projects/id/' +apiId);
+        , options = utils.getHttpOptions(apiBase +'/projects/id/' +id);
       utils.getJson(options, function(data) {
         if (data) {
           projectConfigs[id] = data;
