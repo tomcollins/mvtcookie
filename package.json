@@ -8,8 +8,8 @@
   },
   "subdomain": "mvtapi",
   "dependencies": {
-    "express": "3.0.3",
-    "optimist": "0.5"
+    "optimist": "0.5",
+    "cookies": "0.3.5"
   },
   "devDependencies": {},
   "engines": {

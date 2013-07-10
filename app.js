@@ -1,14 +1,16 @@
 var http = require('http')
-  , fs = require('fs')
-  , path = require('path')
-  , os = require("os")
   , argv = require('optimist').argv
-  , express = require('express');
- 
-var app
-  , port = argv.port || 4000;
+  , Cookies = require('cookies');
 
-// detect env
+// setup
+
+var app
+  , port = argv.port || 4001
+  , cookieName = 'mvt'
+  , cookieTTL = 60 * 1000 //ms
+  , htmlHeaders = {'Content-type': 'text/html'}
+  , jsonHeaders = {'Content-type': 'application/json'};
+
 
 if (!process.env.NODE_ENV) {
   throw('NODE_ENV is not set');
@@ -16,37 +18,61 @@ if (!process.env.NODE_ENV) {
 environment = process.env.NODE_ENV;
 
 
-// create express app
+// utility functions
 
-app = express();
+function getVariant(existingVariant) {
+  // generate 5 HP change location colour variants
+  return 'hp_loc_col_' +Math.floor(Math.random() / 0.2);
+};
 
-app.configure(function(){
-  app.set('port', port);
-  app.use(express.cookieParser());
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(express.static(__dirname + '/public'));
-  app.use(app.router);
-});
+function getExpiresDate() {
+  return new Date(new Date().getTime() + cookieTTL);
+}
 
-app.configure('development', function () {
-  app.use(express.logger('dev'));
-  app.use(express.errorHandler({dumpExceptions: true, showStack: true}));
-  app.use(express.static(path.join(__dirname, 'public')));
-});
+function htmlRequest(req, res) {
+  var cookies = new Cookies(req, res)
+    , existingVariant = cookies.get('mvt')
+    , variant
+    , expiresDate;
 
-app.configure('production', function () {
-  app.use(express.compress());
-  app.use(express.errorHandler());
-  app.use(express.static(path.join(__dirname, 'public'), { maxAge: 120 * 1000 }));
-});
+  if (undefined === existingVariant) {
+    variant = getVariant(existingVariant);
+    expiresDate = getExpiresDate();
+    cookies.set('mvt', variant, {expires: expiresDate});
+    res.writeHead(200, htmlHeaders);
+    res.end('Set cookie to ' +variant +' with expiry ' +expiresDate);
+  } else {
+    res.writeHead(200, htmlHeaders);
+    res.end('Cookie already exists.');
+  }
+}
 
+function jsonRequest(req, res) {
+  var cookies = new Cookies(req, res)
+    , existingVariant = cookies.get('mvt')
+    , variant
+    , expiresDate;
 
-require('./routes/projects').init(app);
-require('./routes/experiments').init(app);
-require('./routes/tracking').init(app);
+  if (undefined === existingVariant) {
+    variant = getVariant(existingVariant);
+    expiresDate = getExpiresDate();
+    cookies.set('mvt', variant, {expires: expiresDate});
+    res.writeHead(200, jsonHeaders);
+    res.end('{"message": "Setting new cookie", "variant":"' +variant +'", "expires": "' +expiresDate +'"}');
+  } else {
+    res.end('{"message": "Cookie already exists."}');
+  }
+}
 
-http.createServer(app).listen(app.get('port'), function(){
-  console.log("Server listening on port " + app.get('port'));
-});
+// server
 
+http.createServer(function(req, res) {
+  switch (req.url) {
+    case '/service.json':
+      jsonRequest(req, res);
+      break;
+    default:
+      htmlRequest(req, res);
+      break;
+  }
+}).listen(port);
