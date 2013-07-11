@@ -57,7 +57,8 @@ function handleRequest(req, res) {
     , existingVariant = cookies.get('mvt')
     , result = {
       variant: null,
-      expiresDate: null
+      expiresDate: null,
+      existingVariant: existingVariant
     };
 
   if (undefined === existingVariant) {
@@ -92,7 +93,7 @@ function jsonRequest(req, res) {
     , headers = {'Content-type': 'application/json'}
     , path = req.url;
 
-  if (false !== existingVariant) {
+  if (false !== result.existingVariant) {
     res.writeHead(200, headers);
     res.end('{"message": "Setting new cookie", "variant":"' +result.variant +'", "expires": "' +result.expiresDate +'"}');
   } else {
