@@ -36,6 +36,7 @@ function loadProjectConfigs() {
 function getVariant(existingVariant, project) {
   var projectConfig;
   this.variant = null;
+  this.delimiter = '|';
   if (project && project.id) {
     projectConfig = utils.getProjectConfigById(projectConfigs, project.id);
     if (false !== projectConfig && projectConfig.variantRule) {
