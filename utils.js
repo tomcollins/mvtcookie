@@ -66,6 +66,19 @@ exports.getHttpOptions = function(uri, proxyUri) {
   return options;
 };
 
+exports.getProjectConfigById = function(projectConfigs, projectId) {
+  var projectConfig = false;
+  if (project && projectId) {
+    projectConfigs.some(function(config){
+      if (projectId === config.id) {
+        projectConfig = config;
+        return true;
+      }
+    });
+  }
+  return projectConfig;
+};
+
 exports.getProjectByPath = function(path, appConfig) {
   var regExp
     , matchedProject

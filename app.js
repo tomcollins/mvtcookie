@@ -1,5 +1,6 @@
 var http = require('http')
   , fs = require('fs')
+  , url = require('url')
   , argv = require('optimist').argv
   , vm = require('vm')
   , Cookies = require('cookies')
@@ -14,7 +15,7 @@ var app
   , cookieName = 'mvt'
   , cookieTTL = argv.cookie_ttl || appConfig.cookieTTL || 60000
   , apiBase = argv.api_base || 'http://localhost:4000'
-  , projectConfigs = {};
+  , projectConfigs = [];
 
 if (!process.env.NODE_ENV) {
   throw('NODE_ENV is not set');
@@ -24,25 +25,20 @@ environment = process.env.NODE_ENV;
 // functions 
 
 function loadProjectConfigs() {
-  appConfig.projects.forEach(function(project){
-    (function () {
-      var id = project.id
-        , options = utils.getHttpOptions(apiBase +'/projects/id/' +id);
-      utils.getJson(options, function(data) {
-        if (data) {
-          projectConfigs[id] = data;
-        }
-      });
-    })()
+  var options = utils.getHttpOptions(apiBase +'/projects');
+  utils.getJson(options, function(data) {
+    if (data) {
+      projectConfigs = data;
+    }
   });
-}
+};
 
 function getVariant(existingVariant, project) {
   var projectConfig;
   this.variant = null;
   if (project && project.id) {
-    projectConfig = projectConfigs[project.id];
-    if (false !== projectConfig && undefined !== projectConfig && projectConfig.variantRule) {
+    projectConfig = utils.getProjectConfigById(projectConfigs, project.id);
+    if (false !== projectConfig && projectConfig.variantRule) {
       try {
         vm.runInThisContext(projectConfig.variantRule);
       } catch(e) {
@@ -50,13 +46,12 @@ function getVariant(existingVariant, project) {
       }
     }
   }
-
   return this.variant;
 };
 
 function handleRequest(req, res) {
-  var project = utils.getProjectByPath(req.url, appConfig)
-    , path = req.url
+  var reqUrl = url.parse(req.url, true)
+    , project = utils.getProjectByPath(reqUrl.pathname, appConfig)
     , cookies = new Cookies(req, res)
     , existingVariant = cookies.get('mvt')
     , result = {
@@ -68,7 +63,7 @@ function handleRequest(req, res) {
     result.variant = getVariant(existingVariant, project);
     result.expiresDate = utils.getExpiresDate(cookieTTL);
     if (null !== result.variant && null !== result.expiresDate) {
-      cookies.set('mvt', result.variant, {expires: result.expiresDate, path: path});
+      cookies.set('mvt', result.variant, {expires: result.expiresDate, path: project.path});
     }
     return result;
   } else {
@@ -79,9 +74,9 @@ function handleRequest(req, res) {
 function htmlRequest(req, res) {
   var result = handleRequest(req, res)
     , headers = {'Content-type': 'text/html'}
-    , path = req.url;
+    , reqUrl = url.parse(req.url, true);
 
-  headers.Location = 'http://' +redirect_host + path;
+  headers.Location = reqUrl.query.ptrt ? reqUrl.query.ptrt : 'http://' +redirect_host + reqUrl.path;
   if (false !== result) {
     res.writeHead(302, headers);
     res.end('Set cookie to ' +result.variant +' with expiry ' +result.expiresDate);
